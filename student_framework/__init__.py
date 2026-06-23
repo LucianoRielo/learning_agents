@@ -36,8 +36,17 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
 
     agent = MyAgent(**kwargs)
 
-    # Ejemplo de registro (elimínenlo cuando sus herramientas estén listas):
-    # from student_framework.tools.example import reverse_string, reverse_string_schema
-    # agent.register_tool(reverse_string, reverse_string_schema)
+    from student_framework.tools.m1_tools import (
+        calculator,
+        calculator_schema,
+        file_reader,
+        file_reader_schema,
+        unit_converter,
+        unit_converter_schema,
+    )
+
+    agent.register_tool(calculator, calculator_schema)
+    agent.register_tool(file_reader, file_reader_schema)
+    agent.register_tool(unit_converter, unit_converter_schema)
 
     return agent
