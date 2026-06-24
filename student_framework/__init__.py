@@ -37,16 +37,16 @@ def build_agent(config: dict[str, Any] | None = None) -> Agent:
     agent = MyAgent(**kwargs)
 
     from student_framework.tools.m1_tools import (
-        calculator,
-        calculator_schema,
-        file_reader,
-        file_reader_schema,
-        unit_converter,
-        unit_converter_schema,
+        calculate,
+        calculate_schema,
+        read_file,
+        read_file_schema,
+        convert_units,
+        convert_units_schema,
     )
 
-    agent.register_tool(calculator, calculator_schema)
-    agent.register_tool(file_reader, file_reader_schema)
-    agent.register_tool(unit_converter, unit_converter_schema)
+    agent.register_tool(calculate, calculate_schema)
+    agent.register_tool(read_file, read_file_schema)
+    agent.register_tool(convert_units, convert_units_schema)
 
     return agent

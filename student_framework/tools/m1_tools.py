@@ -14,7 +14,7 @@ from pydantic import Field
 from mia_agents.types import ToolSchema
 
 ## 1. Calculadora simple
-def calculator(
+def calculate(
     left_operand: Annotated[float, Field(description="Primer operando numérico.")],
     operator: Annotated[str, Field(description="Operador a aplicar: '+', '-', '*' o '%'.")],
     right_operand: Annotated[float, Field(description="Segundo operando numérico.")],
@@ -37,7 +37,7 @@ def calculator(
     return str(operations[operator](left_operand, right_operand))
 
 # 2. Lector de archivos
-def file_reader(
+def read_file(
     path: Annotated[str, Field(description="Ruta al archivo de texto a leer.")],
 ) -> str:
     """Lee un archivo de texto (UTF-8) y devuelve su contenido completo."""
@@ -51,7 +51,7 @@ def file_reader(
     
 
 # 3. Conversor de unidades
-def unit_converter(
+def convert_units(
     value: Annotated[float, Field(description="Valor numérico a convertir.")],
     from_unit: Annotated[str, Field(description="Unidad de origen: 'km', 'mi', 'c' o 'f'.")],
     to_unit: Annotated[str, Field(description="Unidad de destino: 'km', 'mi', 'c' o 'f'.")],
@@ -76,6 +76,6 @@ def unit_converter(
 
 
 # Esquemas para el LLM (NO escribir JSON Schema a mano: from_callable lo deriva)
-calculator_schema = ToolSchema.from_callable(calculator)
-file_reader_schema = ToolSchema.from_callable(file_reader)
-unit_converter_schema = ToolSchema.from_callable(unit_converter)
+calculate_schema = ToolSchema.from_callable(calculate)
+read_file_schema = ToolSchema.from_callable(read_file)
+convert_units_schema = ToolSchema.from_callable(convert_units)
