@@ -11,6 +11,7 @@ Los tests de conformidad en `tests/conformance/test_m1.py` y
 
 from __future__ import annotations
 
+import sys
 from typing import Any, Callable
 
 from mia_agents.protocols import LLMClient
@@ -24,6 +25,7 @@ class MyAgent:
         system_prompt: str = "Eres un asistente útil.",
         max_iterations: int = 10,
         max_history_messages: int = 50,
+        verbose: bool = True,
     ) -> None:
         """Inicializa el agente.
 
@@ -48,10 +50,35 @@ class MyAgent:
         self._system = system_prompt
         self._max_iterations = max_iterations
         self._max_history_messages = max_history_messages
+        self._verbose = verbose
+        if verbose:
+            # En Windows la consola suele ser cp1252 y los emojis del log
+            # romperían el print. Forzamos UTF-8 con reemplazo seguro.
+            try:
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:  # noqa: BLE001 — si el stream no lo soporta, seguimos.
+                pass
         # TODO (M1): inicializa el estado interno para las herramientas registradas.
         self._tools: dict[str, Callable[..., str]] = {}
         self._schemas: dict[str, ToolSchema] = {}
         # TODO (M2): inicializa la estructura de historial conversacional.
+
+    def _log(self, message: str) -> None:
+        """Imprime trazas del agente a stderr.
+
+        Usamos stderr (no stdout) para no ensuciar el JSON que la CLI
+        imprime en stdout. Solo emite si `verbose` está activo.
+        """
+        if self._verbose:
+            print(message, file=sys.stderr, flush=True)
+
+    @staticmethod
+    def _short(text: Any, limit: int = 300) -> str:
+        """Acorta textos largos (p. ej. el contenido de un archivo) para el log."""
+        text = str(text)
+        if len(text) <= limit:
+            return text
+        return text[:limit] + f"... [+{len(text) - limit} caracteres]"
 
     def register_tool(
         self,
@@ -106,8 +133,13 @@ class MyAgent:
         # tools: nunca None si hay herramientas registradas (lo exige el contrato).
         tools = list(self._schemas.values()) if self._schemas else None
 
+        self._log(f"\n🚀 Usuario: {user_message}")
+
         last_content = ""
-        for _ in range(self._max_iterations):
+        for iteration in range(1, self._max_iterations + 1):
+            self._log(
+                f"\n── Iteración {iteration}/{self._max_iterations} · consultando al LLM ──"
+            )
             resp = self._llm.chat(
                 messages=messages,
                 tools=tools,
@@ -116,11 +148,19 @@ class MyAgent:
 
             # Caso 1: el LLM respondió texto sin pedir herramientas -> fin.
             if not resp.tool_calls:
+                self._log(f"✅ Respuesta final: {resp.content or ''}")
                 return AgentResult(answer=resp.content or "", steps=steps)
 
             last_content = resp.content or ""
 
             # Caso 2: el LLM pidió una o más herramientas.
+            if resp.content:
+                self._log(f"🧠 Razonamiento: {resp.content}")
+            self._log(
+                f"🔧 Acción: el LLM pide {len(resp.tool_calls)} herramienta(s): "
+                + ", ".join(tc.name for tc in resp.tool_calls)
+            )
+
             # Registramos el turno del asistente con sus tool_calls.
             messages.append(
                 {
@@ -142,6 +182,8 @@ class MyAgent:
                     kwargs = json.loads(tc.arguments) if tc.arguments else {}
                 except json.JSONDecodeError:
                     kwargs = {}
+
+                self._log(f"   ⚙️  Ejecutando {tc.name}({tc.arguments})")
 
                 tool = self._tools.get(tc.name)
                 if tool is None:
@@ -178,6 +220,8 @@ class MyAgent:
                             )
                         )
 
+                self._log(f"   📥 Resultado: {self._short(output)}")
+
                 # Devolvemos el resultado al LLM en la próxima llamada.
                 messages.append(
                     {
@@ -188,6 +232,7 @@ class MyAgent:
                 )
 
         # Se alcanzó max_iterations: devolvemos un AgentResult válido igual.
+        self._log("⚠️  Se alcanzó max_iterations sin respuesta final.")
         return AgentResult(answer=last_content, steps=steps)
 
 

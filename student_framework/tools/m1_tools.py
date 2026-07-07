@@ -24,17 +24,25 @@ def calculate(
     Operadores soportados: suma (+), resta (-), multiplicación (*) y
     módulo (%). Devuelve el resultado como texto.
     """
+    # Los LLMs suelen mandar los números como texto ("2" en vez de 2).
+    # Coaccionamos a float antes de operar para no concatenar ni crashear.
+    try:
+        a = float(left_operand)
+        b = float(right_operand)
+    except (TypeError, ValueError):
+        return f"Error: operandos no numéricos ('{left_operand}', '{right_operand}')."
+
     operations = {
-        "+": lambda a, b: a + b,
-        "-": lambda a, b: a - b,
-        "*": lambda a, b: a * b,
-        "%": lambda a, b: a % b,
+        "+": lambda x, y: x + y,
+        "-": lambda x, y: x - y,
+        "*": lambda x, y: x * y,
+        "%": lambda x, y: x % y,
     }
     if operator not in operations:
         return f"Error: operador no soportado '{operator}'. Usá uno de: + - * %"
-    if operator == "%" and right_operand == 0:
+    if operator == "%" and b == 0:
         return "Error: módulo por cero."
-    return str(operations[operator](left_operand, right_operand))
+    return str(operations[operator](a, b))
 
 # 2. Lector de archivos
 def read_file(
@@ -61,18 +69,24 @@ def convert_units(
     Soporta distancia (kilómetros 'km' ↔ millas 'mi') y temperatura
     (Celsius 'c' ↔ Fahrenheit 'f'). Devuelve el valor convertido como texto.
     """
+    # Igual que en calculate: el LLM puede mandar el número como texto.
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return f"Error: 'value' no es numérico ('{value}')."
+
     conversions = {
-        ("km", "mi"): lambda v: v * 0.621371,
-        ("mi", "km"): lambda v: v / 0.621371,
-        ("c", "f"): lambda v: v * 9 / 5 + 32,
-        ("f", "c"): lambda v: (v - 32) * 5 / 9,
+        ("km", "mi"): lambda x: x * 0.621371,
+        ("mi", "km"): lambda x: x / 0.621371,
+        ("c", "f"): lambda x: x * 9 / 5 + 32,
+        ("f", "c"): lambda x: (x - 32) * 5 / 9,
     }
     key = (from_unit.lower(), to_unit.lower())
     if from_unit.lower() == to_unit.lower():
-        return str(value)
+        return str(v)
     if key not in conversions:
         return f"Error: no sé convertir de '{from_unit}' a '{to_unit}'."
-    return str(conversions[key](value))
+    return str(conversions[key](v))
 
 
 # Esquemas para el LLM (NO escribir JSON Schema a mano: from_callable lo deriva)
